@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>大模型免费额度速查 · 测试版</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #ffffff; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    color: #1f2328; line-height: 1.55; padding-bottom: 60px;
+  }
+  a { color: #2563eb; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* 顶栏：左上角数据检索日期 */
+  .topbar {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 22px; font-size: 13px; color: #57606a;
+  }
+  .topbar .asof { font-weight: 600; color: #24292f; }
+  .topbar .asof .dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:#16a34a; margin-right:6px; }
+  .topbar .ver { border: 1px solid #d0d7de; border-radius: 999px; padding: 1px 10px; color: #57606a; }
+
+  /* 标题 + 搜索区（页面中上方） */
+  .hero { text-align: center; padding: 34px 16px 10px; }
+  .hero h1 { font-size: 30px; font-weight: 700; letter-spacing: 1px; }
+  .hero p.sub { margin-top: 8px; color: #57606a; font-size: 14px; }
+  .searchbox {
+    position: relative; max-width: 640px; margin: 26px auto 0;
+  }
+  .searchbox svg {
+    position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
+    width: 18px; height: 18px; stroke: #9ca3af;
+  }
+  .searchbox input {
+    width: 100%; padding: 13px 18px 13px 44px; font-size: 15px;
+    border: 1.5px solid #d0d7de; border-radius: 12px; outline: none; background: #fff;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .searchbox input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
+  .searchbox .clear {
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    border: none; background: #e5e7eb; color: #4b5563; width: 22px; height: 22px;
+    border-radius: 50%; cursor: pointer; font-size: 13px; line-height: 1; display: none;
+  }
+  .searchbox .clear.show { display: block; }
+
+  /* 筛选与统计 */
+  .toolbar {
+    max-width: 1100px; margin: 18px auto 10px; padding: 0 16px;
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  }
+  .chip {
+    border: 1px solid #d0d7de; background: #fff; color: #24292f;
+    padding: 5px 14px; border-radius: 999px; font-size: 13px; cursor: pointer;
+  }
+  .chip.on { background: #24292f; color: #fff; border-color: #24292f; }
+  .count { margin-left: auto; font-size: 13px; color: #57606a; }
+
+  /* 表格 */
+  .tablewrap { max-width: 1100px; margin: 0 auto; padding: 0 16px; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; border: 1px solid #d0d7de; border-radius: 10px; overflow: hidden; }
+  thead th {
+    position: sticky; top: 0; background: #f6f8fa; text-align: left;
+    padding: 10px 14px; font-size: 13px; color: #57606a; font-weight: 600;
+    border-bottom: 1px solid #d0d7de; white-space: nowrap;
+  }
+  tbody td { padding: 11px 14px; border-bottom: 1px solid #eaeef2; vertical-align: top; }
+  tbody tr:nth-child(even) { background: #fafbfc; }
+  tbody tr:hover { background: #f3f6ff; }
+  .m-name { font-weight: 600; }
+  .m-vendor { font-size: 12px; color: #57606a; margin-top: 2px; }
+  .region { display: inline-block; font-size: 11px; border-radius: 4px; padding: 0 5px; margin-left: 6px; vertical-align: 1px; }
+  .region.cn { background: #fef3f2; color: #b42318; }
+  .region.intl { background: #eff8ff; color: #175cd3; }
+
+  .pill { display: inline-block; font-size: 12px; font-weight: 600; border-radius: 6px; padding: 1px 8px; white-space: nowrap; }
+  .k-free    { background: #ecfdf5; color: #047857; }
+  .k-daily   { background: #eff6ff; color: #1d4ed8; }
+  .k-monthly { background: #f5f3ff; color: #6d28d9; }
+  .k-onetime { background: #fffbeb; color: #b45309; }
+  .k-none    { background: #f3f4f6; color: #6b7280; }
+  .q-text { margin-top: 4px; }
+  .badge-verify {
+    display: inline-block; font-size: 11px; color: #b91c1c; border: 1px solid #fecaca;
+    background: #fef2f2; border-radius: 4px; padding: 0 5px; margin-left: 6px; white-space: nowrap;
+  }
+  .gate-none { color: #9ca3af; }
+  .gate-pill {
+    display: inline-block; font-size: 12.5px; color: #c2410c; background: #fff7ed;
+    border-radius: 6px; padding: 2px 8px;
+  }
+  .empty { text-align: center; padding: 46px 0 !important; color: #6b7280; }
+
+  /* 说明与来源 */
+  .legend { max-width: 1100px; margin: 14px auto 0; padding: 0 16px; font-size: 12.5px; color: #6b7280; }
+  .sources { max-width: 1100px; margin: 22px auto 0; padding: 0 16px; font-size: 13px; }
+  .sources summary { cursor: pointer; color: #2563eb; font-weight: 600; }
+  .sources ol { margin: 10px 0 0 20px; color: #57606a; }
+  .sources li { margin-bottom: 7px; }
+  footer { text-align: center; margin-top: 30px; font-size: 12px; color: #9ca3af; }
+
+  @media (max-width: 640px) {
+    .hero h1 { font-size: 22px; }
+    .topbar { padding: 12px 14px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="asof"><span class="dot"></span>数据检索截至：2026-10-05</div>
+  <div class="ver">测试版 v0.1</div>
+</div>
+
+<div class="hero">
+  <h1>大模型免费额度速查</h1>
+  <p class="sub">市面主流大模型的免费 tokens / 积分一览 · 输入型号或官网地址即可搜索</p>
+  <div class="searchbox">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+    <label for="q" style="position:absolute;left:-9999px;">搜索大模型</label>
+    <input id="q" type="text" autocomplete="off" placeholder="搜索模型型号或官网，如：GLM、Gemini、deepseek.com">
+    <button class="clear" id="clearBtn" title="清空">×</button>
+  </div>
+</div>
+
+<div class="toolbar">
+  <button class="chip on" data-f="all">全部</button>
+  <button class="chip" data-f="free">无门槛</button>
+  <button class="chip" data-f="gate">有门槛</button>
+  <span class="count" id="count"></span>
+</div>
+
+<div class="tablewrap">
+  <table>
+    <thead>
+      <tr>
+        <th style="width:26%">模型</th>
+        <th style="width:40%">免费额度（tokens · 积分）</th>
+        <th style="width:22%">门槛</th>
+        <th style="width:12%">官网</th>
+      </tr>
+    </thead>
+    <tbody id="rows"></tbody>
+  </table>
+</div>
+
+<p class="legend">「门槛」= 除注册账号外，领取 / 使用免费额度还需满足的条件（实名认证、绑卡、新用户限定、每日签到等）；「—」表示无门槛。额度以各官网公示为准，点击官网链接可核实最新数值。</p>
+
+<div class="sources">
+  <details>
+    <summary>数据来源与逐条说明（点击展开）</summary>
+    <ol id="srcList"></ol>
+  </details>
+</div>
+
+<footer>数据由各厂商官网 / 官方文档人工整理，仅供测试核验 · 不构成任何消费建议</footer>
+
+<script>
+const DATA = [
+  // ===== 国内 =====
+  { name:"GLM-4.7-Flash", vendor:"智谱 AI", region:"cn", kind:"free", amt:"不限量（限速）", gate:"", conf:"medium",
+    url:"https://docs.bigmodel.cn/cn/guide/models/free/glm-4.7-flash",
+    src:"https://docs.bigmodel.cn/cn/guide/models/free/glm-4.5-flash",
+    note:"官方免费模型目录收录；GLM-4.5-Flash 按官方公告于 2026-01-30 下线，请求自动路由至 GLM-4.7-Flash。" },
+  { name:"GLM 新用户礼包（GLM-4.5-Air 等）", vendor:"智谱 AI", region:"cn", kind:"onetime", amt:"4,500 万 tokens（2000万 Air + 2500万 通用礼包，价值约 58 元）", gate:"新用户限定 · 需实名认证 · 经邀请链接注册", conf:"high",
+    url:"https://bigmodel.cn",
+    src:"https://docs.bigmodel.cn/cn/update/promotion",
+    note:"推荐有礼双方各得 2000 万 GLM-4.5-Air tokens，被邀请人另得 2500 万 tokens 礼包；每人每月最多邀请 10 人（月上限 2 亿 tokens）。" },
+  { name:"DeepSeek API（deepseek-flash / v4-pro）", vendor:"深度求索 DeepSeek", region:"cn", kind:"none", amt:"无免费额度 · 网页 / App 对话免费", gate:"", conf:"high",
+    url:"https://www.deepseek.com",
+    src:"https://api-docs.deepseek.com/zh-cn/quick_start/pricing",
+    note:"官方定价页无注册赠送；2024 年的注册赠送（约 500 万 tokens）已于 2025 年取消。" },
+  { name:"Qwen 系列（通义千问）", vendor:"阿里云百炼", region:"cn", kind:"onetime", amt:"每模型 100 万 tokens（90 天有效，百余款合计超 7000 万）", gate:"新用户限定 · 需阿里云实名认证", conf:"high",
+    url:"https://bailian.console.aliyun.com/",
+    src:"https://help.aliyun.com/zh/model-studio/new-free-quota",
+    note:"仅限华北2（北京）地域、仅实时推理调用；各模型额度独立不互通，过期作废不补发。" },
+  { name:"Kimi API（kimi-k2.7 / k2.6）", vendor:"月之暗面 Kimi", region:"cn", kind:"onetime", amt:"15 元代金券（Kimi K3 不适用）", gate:"需实名认证", conf:"high",
+    url:"https://platform.kimi.com",
+    src:"https://platform.kimi.com/docs/guide/account-and-payments.md",
+    note:"实名认证成功后发放；平台已由 platform.moonshot.cn 迁移至 platform.kimi.com。" },
+  { name:"豆包 doubao-seed 系列", vendor:"字节跳动 · 火山方舟", region:"cn", kind:"onetime", amt:"每模型 50 万 tokens（90 天有效）", gate:"需实名认证 · 方舟控制台领取", conf:"medium",
+    url:"https://www.volcengine.com/product/ark",
+    src:"https://docs.volcengine.com/docs/ark/free-inference-quota",
+    note:"官方确认注册即有按模型独立计数、90 天有效的免费推理额度；具体数值需登录控制台查询，50 万为第三方一致口径。" },
+  { name:"火山方舟 · 协作奖励计划", vendor:"字节跳动 · 火山方舟", region:"cn", kind:"daily", amt:"单模型最高 500 万 tokens（领取后 24 小时有效）", gate:"需加入开发者协作奖励计划并每日签到", conf:"medium",
+    url:"https://www.volcengine.com/product/ark",
+    src:"https://www.volcengine.com/product/ark",
+    note:"产品页宣传口径，实际可领额度以控制台为准；另有新用户 100 万通用体验额度（180 天）的说法。" },
+  { name:"ERNIE Speed / Lite / Tiny 系列", vendor:"百度智能云千帆", region:"cn", kind:"free", amt:"不限量（TPM / RPM 限速）", gate:"需实名认证 · 控制台「免费开通」", conf:"high",
+    url:"https://console.bce.baidu.com/qianfan/",
+    src:"https://ai.baidu.com/ai-doc/WENXINWORKSHOP/wlwg8f1i3",
+    note:"2024-05 起 tokens 后付费降为 0 元，官方称长期开放；Speed-8K 示例 RPM 300 / TPM 30 万，提额需购买资源包。" },
+  { name:"hunyuan-lite", vendor:"腾讯混元", region:"cn", kind:"free", amt:"不限量（限并发）", gate:"需腾讯云实名认证并开通混元服务", conf:"medium",
+    url:"https://cloud.tencent.com/product/hunyuan",
+    src:"https://cloud.tencent.com/document/product/1729/97731",
+    note:"2024-05 起全面免费；但 2026-10 官方计费页已不再列出该模型，是否仍可调用需在控制台确认。" },
+  { name:"混元 新用户资源包（a13b / embedding）", vendor:"腾讯混元", region:"cn", kind:"onetime", amt:"100 万 tokens（1 年有效）", gate:"首次开通混元服务 · 需实名认证", conf:"high",
+    url:"https://cloud.tencent.com/product/hunyuan",
+    src:"https://cloud.tencent.com/document/product/1729/97731",
+    note:"首次开通发放一次性资源包；结算顺序：免费资源包 > 付费资源包 > 后付费。" },
+  { name:"MiniMax（M2.7 / M3）", vendor:"MiniMax", region:"cn", kind:"none", amt:"无免费额度 · M3 标注永久五折", gate:"", conf:"medium",
+    url:"https://platform.minimax.cn",
+    src:"https://platform.minimax.cn/docs/pricing/overview.md",
+    note:"官方定价与账户文档均无注册赠送；第三方称历史上有注册送 15 元活动。" },
+  { name:"星火 Spark Lite", vendor:"科大讯飞 星火", region:"cn", kind:"free", amt:"不限量（低并发限速）", gate:"", conf:"high",
+    url:"https://www.xfyun.cn/",
+    src:"https://www.xfyun.cn/doc/spark/HTTP%E8%B0%83%E7%94%A8%E6%96%87%E6%A1%A3.html",
+    note:"官方文档原文「支持免费使用」；并发路数 / 秒级流控 / 日流控受限，提额需联系商务。" },
+  { name:"StepAudio-3 系列（音频 / 音乐 4 款）", vendor:"阶跃星辰", region:"cn", kind:"free", amt:"限时免费（V0 档：并发 5 / RPM 100 / TPM 50 万）", gate:"需实名认证", conf:"high",
+    url:"https://platform.stepfun.com",
+    src:"https://platform.stepfun.com/docs/zh/guides/pricing/details",
+    note:"官方定价页标注「限时免费」，恢复收费时间未公示；文本模型 step-5-preview 为付费。" },
+  { name:"硅基流动 新用户赠金", vendor:"SiliconFlow 硅基流动", region:"cn", kind:"onetime", amt:"16 元代金券（第三方折算约 2000 万 tokens）", gate:"新用户限定 · 需实名认证 · 邀请注册双方各得 16 元", conf:"medium",
+    url:"https://cloud.siliconflow.cn",
+    src:"https://docs.siliconflow.cn/docs/usercases/use-siliconcloud-in-cube-agent",
+    note:"16 元为官方邀请奖励口径；普通注册的赠送额官方未明示，第三方称约 14 元。" },
+  { name:"硅基流动 0 元模型（Xing4.0-29B / Z-Image-Turbo 等）", vendor:"SiliconFlow 硅基流动", region:"cn", kind:"free", amt:"模型广场 0 元标价模型（列表随时间变动）", gate:"", conf:"medium",
+    url:"https://www.siliconflow.cn/models",
+    src:"https://www.siliconflow.cn/models",
+    note:"以模型广场「免费」筛选的实时结果为准。" },
+  { name:"天工 API（Skywork 系列）", vendor:"昆仑万维 天工", region:"cn", kind:"none", amt:"未查到官方免费额度 · 需注册进控制台确认", gate:"", conf:"low",
+    url:"https://www.tiangong.cn",
+    src:"https://model-platform.tiangong.cn/",
+    note:"原 API 开放平台已重定向至主站，现行免费政策无公开页面可核查。" },
+  // ===== 国际 =====
+  { name:"ChatGPT 免费版（GPT-5.6）", vendor:"OpenAI", region:"intl", kind:"daily", amt:"文本对话不限量（推理 / 图像 / 语音按 5 小时窗口限量）", gate:"", conf:"medium",
+    url:"https://chatgpt.com",
+    src:"https://help.openai.com/en/articles/20001354-gpt-56-and-gpt-6-pro-in-chatgpt",
+    note:"2026-08 起免费版普通文本聊天不限量；官方帮助页屏蔽爬虫，结论基于官方文章摘录 + 多方佐证。" },
+  { name:"GPT-5.x API（数据共享赠送）", vendor:"OpenAI", region:"intl", kind:"daily", amt:"按日赠送 tokens（数额以控制台资格页为准）", gate:"需 Tier 1+ 组织 · 开通 API 流量数据共享", conf:"medium",
+    url:"https://platform.openai.com",
+    src:"https://help.openai.com/en/articles/9460708",
+    note:"普通新账号无免费 API 额度；第三方称约 25 万 ～ 数百万 tokens / 日不等，官方未公布统一数额。" },
+  { name:"Gemini API 免费层（3.8 / 3.5 Flash、Flash-Lite、Gemma 4）", vendor:"Google", region:"intl", kind:"free", amt:"不限量（RPM / TPM / RPD 限速，具体限额仅登录 AI Studio 可见）", gate:"", conf:"high",
+    url:"https://aistudio.google.com",
+    src:"https://ai.google.dev/gemini-api/docs/pricing",
+    note:"官方定价页标注免费层 Free of charge；Pro Preview 免费层不可用。" },
+  { name:"Claude 免费版（claude.ai）", vendor:"Anthropic", region:"intl", kind:"daily", amt:"约 40 条短消息（5 小时滚动窗口 + 周限额）", gate:"", conf:"medium",
+    url:"https://claude.ai",
+    src:"https://support.claude.com/en/articles/11647753",
+    note:"官方仅说明按窗口与「对话预算」计算，不公布固定条数，40 条 / 日为第三方估算；高峰期动态收紧。" },
+  { name:"Claude API 新账号", vendor:"Anthropic", region:"intl", kind:"onetime", amt:"约 $5 赠金（用完即需付费）", gate:"需手机号（SMS）验证", conf:"low",
+    url:"https://platform.claude.com",
+    src:"https://www.getaiperks.com",
+    note:"仅第三方 2026 年报道一致称约 $5 一次性试用金；无持续免费层。" },
+  { name:"Grok 免费版（grok.com / X）", vendor:"xAI", region:"intl", kind:"daily", amt:"约 5–20 条消息（随负载动态调整）", gate:"", conf:"low",
+    url:"https://grok.com",
+    src:"https://docs.x.ai/",
+    note:"官方不公布固定数字，可在 Settings 查看余量；随新模型发布有收紧趋势。" },
+  { name:"Grok API（console.x.ai）", vendor:"xAI", region:"intl", kind:"onetime", amt:"$25 赠金 + 每月 $150（开通数据共享）", gate:"每月 $150 需开通数据共享且不可撤销", conf:"medium",
+    url:"https://console.x.ai",
+    src:"https://docs.x.ai/developers/free-credits",
+    note:"新团队注册自动获 $25 赠金。" },
+  { name:"Mistral 免费层（Large 3 / Medium 3 / Codestral）", vendor:"Mistral AI", region:"intl", kind:"monthly", amt:"约 10 亿 tokens（1 req/s）", gate:"需手机验证 · 须同意数据用于训练", conf:"medium",
+    url:"https://console.mistral.ai",
+    src:"https://docs.mistral.ai/deployment/laplateforme/tier/",
+    note:"Experiment 层免费可用全部模型；最新限额数字仅登录控制台可见。" },
+  { name:"Cohere Trial Key（Command A / R 系列）", vendor:"Cohere", region:"intl", kind:"monthly", amt:"1,000 次 API 调用（Chat 端点 20 req/min）", gate:"", conf:"high",
+    url:"https://dashboard.cohere.com",
+    src:"https://docs.cohere.com/docs/rate-limits",
+    note:"trial key 免费、无需绑卡。" },
+  { name:"Groq 免费层（gpt-oss-120b / Llama 等）", vendor:"Groq", region:"intl", kind:"daily", amt:"约 1,000 次请求 / 20 万 tokens（实际限额登录控制台可见）", gate:"", conf:"medium",
+    url:"https://console.groq.com",
+    src:"https://console.groq.com/docs/rate-limits",
+    note:"免费层个性化限额仅在控制台 Limits 页展示，此为官方公布的 Developer 计划基础限额示例。" },
+  { name:"Cerebras Inference 免费层", vendor:"Cerebras", region:"intl", kind:"onetime", amt:"$5 赠金（激活后 30 天有效）", gate:"需绑卡（添加支付方式后发放）", conf:"high",
+    url:"https://www.cerebras.ai/pricing",
+    src:"https://www.cerebras.ai/pricing",
+    note:"2026-09 报道：免费层改为每模型 5 RPM / 100 万 tokens/日 的 30 天试用结构。" },
+  { name:"OpenRouter :free 模型（DeepSeek R1、Llama 4 等）", vendor:"OpenRouter", region:"intl", kind:"daily", amt:"50 次请求（20 req/min，仅 :free 结尾模型）", gate:"提升至每日 1,000 次需历史累计充值 $10", conf:"high",
+    url:"https://openrouter.ai/docs/api-reference/limits",
+    src:"https://openrouter.ai/docs/api-reference/limits",
+    note:"档位按全历史充值额判定。" },
+  { name:"GitHub Models", vendor:"GitHub", region:"intl", kind:"none", amt:"已停止服务（2026-07-30 全量下线）", gate:"", conf:"high",
+    url:"https://github.com/marketplace/models",
+    src:"https://docs.github.com/en/github-models/use-github-models/prototyping-with-ai-models",
+    note:"官方指引迁移至 Azure AI Foundry 或 GitHub Copilot。" },
+  { name:"NVIDIA NIM（build.nvidia.com）", vendor:"NVIDIA", region:"intl", kind:"onetime", amt:"1,000 积分（1 积分 ≈ 1 次调用，可申请提升至 5,000）", gate:"", conf:"medium",
+    url:"https://build.nvidia.com",
+    src:"https://forums.developer.nvidia.com/t/nvidia-nim-faq/300317",
+    note:"约 40 req/min，定位为试用；数字来自 NVIDIA 官方开发者论坛 FAQ。" },
+  { name:"Together AI", vendor:"Together AI", region:"intl", kind:"none", amt:"无免费额度 · 需最低充值 $5", gate:"", conf:"high",
+    url:"https://docs.together.ai/docs/billing-credits",
+    src:"https://docs.together.ai/docs/billing-credits",
+    note:"2025 年由 $25 赠送降至 $1，2026 年官方文档确认不再提供免费试用。" },
+  { name:"Cloudflare Workers AI", vendor:"Cloudflare", region:"intl", kind:"daily", amt:"10,000 Neurons（UTC 0 点重置）", gate:"部分模型（特定 Kimi / GLM / DeepSeek 变体）需绑卡", conf:"high",
+    url:"https://developers.cloudflare.com/workers-ai/platform/pricing/",
+    src:"https://developers.cloudflare.com/workers-ai/platform/pricing/",
+    note:"超出后免费计划直接报错，付费计划按 $0.011 / 千 Neurons 计费。" },
+  { name:"Perplexity 免费版", vendor:"Perplexity", region:"intl", kind:"daily", amt:"约 5 次 Pro 搜索（快速搜索不限）", gate:"", conf:"medium",
+    url:"https://www.perplexity.ai",
+    src:"https://www.perplexity.ai/",
+    note:"官方定价页称免费版「随时间调整」，不承诺固定数字。" },
+  { name:"Poe 免费账户", vendor:"Poe（Quora）", region:"intl", kind:"daily", amt:"约 300 积分（当日有效不结转）", gate:"", conf:"low",
+    url:"https://poe.com",
+    src:"https://help.poe.com/hc/en-us/articles/19944206309524-Poe-FAQs",
+    note:"官方仅确认每日发放积分、不公布固定数字；第三方口径 300 ～ 10,000 积分/日冲突，消耗因模型而异。" }
+];
+
+const KIND_LABEL = { free:"免费不限", daily:"每日", monthly:"每月", onetime:"一次性", none:"无免费" };
+const KIND_CLASS = { free:"k-free", daily:"k-daily", monthly:"k-monthly", onetime:"k-onetime", none:"k-none" };
+const rowsEl = document.getElementById("rows");
+const countEl = document.getElementById("count");
+const qEl = document.getElementById("q");
+const clearBtn = document.getElementById("clearBtn");
+const srcListEl = document.getElementById("srcList");
+let filter = "all";
+
+function domain(u) { try { return new URL(u).hostname.replace(/^www\./, ""); } catch (e) { return u; } }
+function cat(d) {
+  if (d.kind === "none") return "none";
+  return d.gate ? "gate" : "free";
+}
+function esc(s) { return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+function render() {
+  const kw = qEl.value.trim().toLowerCase();
+  let shown = 0;
+  const html = DATA.map(function (d) {
+    const c = cat(d);
+    if (filter !== "all" && filter !== c) return "";
+    const hay = (d.name + " " + d.vendor + " " + d.url + " " + d.amt).toLowerCase();
+    if (kw && hay.indexOf(kw) === -1) return "";
+    shown++;
+    const gateCell = d.gate
+      ? '<span class="gate-pill">' + esc(d.gate) + '</span>'
+      : '<span class="gate-none">—</span>';
+    const verify = d.conf === "low" ? '<span class="badge-verify">待核实</span>' : "";
+    return '<tr>' +
+      '<td><div class="m-name">' + esc(d.name) + '</div>' +
+      '<div class="m-vendor">' + esc(d.vendor) +
+      '<span class="region ' + d.region + '">' + (d.region === "cn" ? "中国" : "国际") + '</span></div></td>' +
+      '<td><span class="pill ' + KIND_CLASS[d.kind] + '">' + KIND_LABEL[d.kind] + '</span>' + verify +
+      '<div class="q-text">' + esc(d.amt) + '</div></td>' +
+      '<td>' + gateCell + '</td>' +
+      '<td><a href="' + d.url + '" target="_blank" rel="noopener">' + esc(domain(d.url)) + ' ↗</a></td>' +
+      '</tr>';
+  }).join("");
+  rowsEl.innerHTML = shown
+    ? html
+    : '<tr><td colspan="4" class="empty">没有匹配的结果，换个关键词试试</td></tr>';
+  countEl.textContent = "共 " + DATA.length + " 条 · 显示 " + shown + " 条";
+}
+
+qEl.addEventListener("input", function () {
+  clearBtn.classList.toggle("show", !!qEl.value);
+  render();
+});
+clearBtn.addEventListener("click", function () {
+  qEl.value = ""; clearBtn.classList.remove("show"); render(); qEl.focus();
+});
+document.querySelectorAll(".chip").forEach(function (chip) {
+  chip.addEventListener("click", function () {
+    document.querySelectorAll(".chip").forEach(function (c) { c.classList.remove("on"); });
+    chip.classList.add("on");
+    filter = chip.getAttribute("data-f");
+    render();
+  });
+});
+
+// 底部来源列表
+srcListEl.innerHTML = DATA.map(function (d) {
+  return '<li><b>' + esc(d.name) + '</b>（' + esc(d.vendor) + '，置信度 ' +
+    ({high:"高", medium:"中", low:"低"})[d.conf] + '）：' +
+    '<a href="' + d.src + '" target="_blank" rel="noopener">来源</a> · ' +
+    '<a href="' + d.url + '" target="_blank" rel="noopener">官网</a> —— ' + esc(d.note) + '</li>';
+}).join("");
+
+render();
+</script>
+</body>
+</html>
